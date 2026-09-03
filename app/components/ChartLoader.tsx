@@ -17,7 +17,7 @@ import { usePaperTrading } from "@/hooks/usePaperTrading";
 import { getCurrency, currencySymbol } from "@/lib/paperTrading";
 import { useIndicators } from "@/hooks/useIndicators";
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
 
 // ── Polling interval per timeframe ─────────────────────────────────────────
