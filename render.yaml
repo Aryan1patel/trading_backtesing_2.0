@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: chartlens-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FYERS_CLIENT_ID
+        sync: false          # set manually in Render dashboard
+      - key: FYERS_SECRET_KEY
+        sync: false          # set manually in Render dashboard
+      - key: FYERS_REDIRECT_URI
+        sync: false          # set to https://<your-render-url>/api/fyers/callback
+      - key: CORS_ORIGINS
+        sync: false          # set to https://<your-vercel-url>.vercel.app
+    disk:
+      name: backtest-cache
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1              # free tier gives 1 GB persistent disk
