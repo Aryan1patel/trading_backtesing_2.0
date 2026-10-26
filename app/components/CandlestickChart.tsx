@@ -296,6 +296,17 @@ const CHART_GRID   = { vertLines: { color: "#1e2130" }, horzLines: { color: "#1e
 const PRICE_SCALE  = { borderColor: "#1e2130", textColor: "#758696" };
 const TS_BASE      = { borderColor: "#1e2130", timeVisible: true, secondsVisible: false };
 
+// All timestamps from the backend are real UTC. Add IST offset (+5h30m) for display.
+const IST_OFFSET_S = 19800;
+function fmtISTTime(t: Time): string {
+  const ts = typeof t === "number" ? t : typeof t === "string" ? new Date(t).getTime() / 1000 : 0;
+  const d  = new Date((ts + IST_OFFSET_S) * 1000);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+const CHART_LOCALE = { localization: { timeFormatter: fmtISTTime } };
+
 // ── Per-instance series bundle ────────────────────────────────────────────
 
 interface OverlayBundle {
@@ -570,6 +581,7 @@ export default function CandlestickChart({
         timeScale: { ...TS_BASE, visible: showTimeScale },
         handleScale: { axisPressedMouseMove: { time: true, price: true } },
         handleScroll: { mouseWheel: true, pressedMouseMove: true },
+        ...CHART_LOCALE,
       });
 
     const mainChart = makeChart(mainContainerRef.current, true);

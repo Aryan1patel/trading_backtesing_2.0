@@ -32,6 +32,11 @@ logger = logging.getLogger(__name__)
 # ── Auth error codes Fyers returns when token is expired / invalid ────────
 FYERS_AUTH_ERROR_CODES = {-8, -15, -16, -17}
 
+# Fyers API returns epoch seconds in IST (not UTC).
+# 09:15 IST appears as if it were 09:15 UTC in the epoch value.
+# Subtract this offset to normalize to real UTC before sending to the frontend.
+IST_OFFSET_S = 19800  # 5 hours 30 minutes
+
 
 class FyersAuthError(Exception):
     """Raised when Fyers returns an auth error — caller should prompt re-login."""
@@ -78,18 +83,26 @@ _FYERS_API_BASE = "https://api-t1.fyers.in/api/v3"
 
 def to_fyers_symbol(symbol: str) -> str:
     """
-    Convert a plain NSE symbol to Fyers format.
-    e.g.  RELIANCE  →  NSE:RELIANCE-EQ
-          NIFTY50   →  NSE:NIFTY50-INDEX  (indices stay as-is)
+    Convert a plain symbol to Fyers format.
+    e.g.  RELIANCE      →  NSE:RELIANCE-EQ
+          NIFTY50       →  NSE:NIFTY50-INDEX
+          GOLD          →  MCX:GOLD-I  (continuous front-month)
+          SILVER        →  MCX:SILVER-I
+          CRUDEOIL      →  MCX:CRUDEOIL-I
     """
     symbol = symbol.upper().strip()
     # Already formatted
     if ":" in symbol:
         return symbol
-    # Indices don't get -EQ
-    indices = {"NIFTY50", "BANKNIFTY", "NIFTYIT", "NIFTYMIDCAP50"}
+    # MCX commodities
+    mcx_continuous = {"GOLD", "SILVER", "CRUDEOIL", "NATURALGAS", "COPPER", "ZINC", "LEAD", "NICKEL", "ALUMINIUM"}
+    if symbol in mcx_continuous:
+        return f"MCX:{symbol}-I"
+    # NSE indices
+    indices = {"NIFTY50", "BANKNIFTY", "NIFTYIT", "NIFTYMIDCAP50", "FINNIFTY", "MIDCPNIFTY"}
     if symbol in indices:
         return f"NSE:{symbol}-INDEX"
+    # Default: NSE equity
     return f"NSE:{symbol}-EQ"
 
 
@@ -166,8 +179,10 @@ def _fetch_chunk(
             # Skip zero/invalid bars
             if o <= 0 or h <= 0:
                 continue
+            # Fyers epoch is IST-based — normalize to real UTC
+            utc_epoch = int(epoch) - IST_OFFSET_S
             bars.append({
-                "time":   epoch,          # already epoch seconds
+                "time":   utc_epoch,
                 "open":   round(float(o),  2),
                 "high":   round(float(h),  2),
                 "low":    round(float(l),  2),

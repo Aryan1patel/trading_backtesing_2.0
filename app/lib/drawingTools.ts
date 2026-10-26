@@ -147,6 +147,39 @@ function timeToX(api: SeriesAttachedParameter<Time>, t: number | string): number
   return x ?? null;
 }
 
+/**
+ * Like timeToX but extrapolates past the last candle so drawings render
+ * correctly in future (empty) space.  Uses the same seconds-per-pixel
+ * rate from two nearby sample points on the known range.
+ */
+function timeToXFuture(api: SeriesAttachedParameter<Time>, t: number | string): number | null {
+  const direct = api.chart.timeScale().timeToCoordinate(t as Time);
+  if (direct !== null && direct !== undefined) return direct as number;
+
+  // t is past the last candle — extrapolate
+  const ts = typeof t === "number" ? t : new Date(t as string).getTime() / 1000;
+  // Find two reference points well inside the known range to get px/sec rate
+  // Walk backwards from a wide canvas estimate
+  const ts2 = api.chart.timeScale();
+  // Sample at two known time positions near the right edge of data
+  // Strategy: try coordinateToTime at fixed pixels from the visible right edge
+  // We don't have the chart width here, but we can sample at large pixel values
+  // and walk left until we find valid times.
+  for (let offset = 50; offset <= 2000; offset += 50) {
+    const t1raw = ts2.coordinateToTime(offset as Time);
+    const t2raw = ts2.coordinateToTime((offset + 100) as Time);
+    if (t1raw === null || t1raw === undefined || t2raw === null || t2raw === undefined) continue;
+    const ts1s = typeof t1raw === "number" ? t1raw : new Date(t1raw as string).getTime() / 1000;
+    const ts2s = typeof t2raw === "number" ? t2raw : new Date(t2raw as string).getTime() / 1000;
+    if (ts1s === ts2s) continue;
+    const pixPerSec = 100 / (ts2s - ts1s); // pixels per second
+    const x1px = ts2.timeToCoordinate(t1raw);
+    if (x1px === null) continue;
+    return (x1px as number) + (ts - ts1s) * pixPerSec;
+  }
+  return null;
+}
+
 function priceToY(api: SeriesAttachedParameter<Time>, price: number): number | null {
   const y = api.series.priceToCoordinate(price);
   return y ?? null;
@@ -319,28 +352,22 @@ class RectangleRenderer implements IPrimitivePaneRenderer {
   ) {}
 
   draw(target: CanvasTarget2D): void {
-    target.useBitmapCoordinateSpace(({ context: ctx, horizontalPixelRatio: hr, verticalPixelRatio: vr, mediaSize }) => {
+    target.useBitmapCoordinateSpace(({ context: ctx, horizontalPixelRatio: hr, verticalPixelRatio: vr }) => {
       const ratio = hr;
-      const x1c = timeToX(this._api, this._d.p1.time);
+      const x1c = timeToXFuture(this._api, this._d.p1.time);
       const y1c = priceToY(this._api, this._d.p1.price);
-      const x2c = timeToX(this._api, this._d.p2.time);
+      const x2c = timeToXFuture(this._api, this._d.p2.time);
       const y2c = priceToY(this._api, this._d.p2.price);
-      if (y1c === null || y2c === null) return;
+      if (x1c === null || y1c === null || x2c === null || y2c === null) return;
 
-      // If a time coordinate falls outside the visible range (e.g. drawn into
-      // empty space right of the last candle), clamp to canvas edges so the
-      // rectangle still renders fully.
-      const W  = mediaSize.width  * hr;
-      const H  = mediaSize.height * vr;
-      const x1 = (x1c !== null ? x1c : 0)   * hr;
-      const x2 = (x2c !== null ? x2c : W / hr) * hr;
+      const x1 = x1c * hr;
+      const x2 = x2c * hr;
       const y1 = y1c * vr;
       const y2 = y2c * vr;
 
       const rx = Math.min(x1, x2); const ry = Math.min(y1, y2);
       const rw = Math.abs(x2 - x1); const rh = Math.abs(y2 - y1);
       const mx = rx + rw / 2; const my = ry + rh / 2;
-      void H; // H available if needed for future clamping
 
       ctx.save();
       ctx.fillStyle = this._d.color;
@@ -388,9 +415,9 @@ export class RectanglePrimitive implements ISeriesPrimitiveBase {
 
   getHandles(): Handle[] {
     if (!this._api) return [];
-    const x1c = timeToX(this._api, this.data.p1.time);
+    const x1c = timeToXFuture(this._api, this.data.p1.time);
     const y1c = priceToY(this._api, this.data.p1.price);
-    const x2c = timeToX(this._api, this.data.p2.time);
+    const x2c = timeToXFuture(this._api, this.data.p2.time);
     const y2c = priceToY(this._api, this.data.p2.price);
     if (x1c === null || y1c === null || x2c === null || y2c === null) return [];
     const rx = Math.min(x1c, x2c); const ry = Math.min(y1c, y2c);

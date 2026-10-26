@@ -2446,6 +2446,103 @@ input.bt-date {
   opacity: 0.6;
 }
 
+/* ── Watchlist search bar ────────────────────────────────────────────────── */
+.wl-search-wrap {
+  position: relative;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wl-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 8px;
+  transition: border-color 0.15s;
+}
+.wl-search-box:focus-within {
+  border-color: var(--accent-green);
+}
+
+.wl-search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.wl-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 12px;
+  min-width: 0;
+}
+.wl-search-input::placeholder { color: var(--text-muted); }
+
+.wl-search-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 2px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.wl-search-clear:hover { color: var(--text-primary); }
+
+.wl-search-results {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 8px;
+  right: 8px;
+  z-index: 200;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.wl-search-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  font-family: var(--font);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.wl-search-result:hover { background: var(--bg-hover); }
+
+.wl-search-result-sym {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.wl-search-result-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Phase 7 — Paper Trading
    ══════════════════════════════════════════════════════════════════════════ */

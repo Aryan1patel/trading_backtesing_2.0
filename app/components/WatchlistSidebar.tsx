@@ -71,7 +71,87 @@ function WatchlistRow({
   );
 }
 
-// ── Add symbol panel ──────────────────────────────────────────────────────
+// ── Search bar ────────────────────────────────────────────────────────────
+
+function SearchBar({
+  onSelect,
+}: {
+  onSelect: (symbol: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen]   = useState(false);
+  const inputRef          = useRef<HTMLInputElement>(null);
+  const wrapRef           = useRef<HTMLDivElement>(null);
+
+  const results = query.trim().length > 0
+    ? Object.entries(MOCK_QUOTES)
+        .filter(([sym, q]) =>
+          sym.toLowerCase().includes(query.toLowerCase()) ||
+          q.name.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(0, 12)
+    : [];
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false); setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  // Close on Escape
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); setQuery(""); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="wl-search-wrap">
+      <div className="wl-search-box">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="wl-search-icon">
+          <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M8 8 L11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+        <input
+          ref={inputRef}
+          className="wl-search-input"
+          type="text"
+          placeholder="Search symbol…"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          aria-label="Search symbols"
+          aria-autocomplete="list"
+          aria-expanded={open && results.length > 0}
+        />
+        {query && (
+          <button className="wl-search-clear" onClick={() => { setQuery(""); setOpen(false); inputRef.current?.focus(); }} aria-label="Clear search">✕</button>
+        )}
+      </div>
+      {open && results.length > 0 && (
+        <div className="wl-search-results" role="listbox">
+          {results.map(([sym, q]) => (
+            <button
+              key={sym}
+              className="wl-search-result"
+              role="option"
+              onClick={() => { onSelect(sym); setQuery(""); setOpen(false); }}
+            >
+              <span className="wl-search-result-sym">{sym}</span>
+              <span className="wl-search-result-name">{q.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AddSymbolPanel({
   available,
@@ -201,6 +281,9 @@ export default function WatchlistSidebar({
               onClose={() => setShowAddPanel(false)}
             />
           )}
+
+          {/* ── Search bar ───────────────────────────────────────────── */}
+          <SearchBar onSelect={(sym) => { onSelect(sym); }} />
 
           {/* ── Symbol list ──────────────────────────────────────────── */}
           <div className="wl-list" role="list" aria-label="Watchlist symbols">

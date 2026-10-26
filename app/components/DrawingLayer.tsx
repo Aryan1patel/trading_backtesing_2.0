@@ -58,6 +58,8 @@ export default function DrawingLayer({ symbol, timeframe, chart, series, locked 
 
   const pendingRef = useRef<{ p1: { time: number | string; price: number } } | null>(null);
   const ghostRef   = useRef<GhostPrimitive | null>(null);
+  const seriesRef  = useRef(series); // stable ref so persist effect doesn't need series as dep
+  useEffect(() => { seriesRef.current = series; }, [series]);
   const dragRef    = useRef<{
     drawingId: string; handle: Handle | null;
     startX: number; startY: number; origData: DrawingObject;
@@ -127,7 +129,12 @@ export default function DrawingLayer({ symbol, timeframe, chart, series, locked 
   }, [symbol, timeframe, series]);
 
   // ── Persist on change ─────────────────────────────────────────────────
+  // IMPORTANT: only save when the chart series is mounted. On the first render
+  // series is null so the load effect bails early — drawings would be [] here
+  // and saving would wipe valid localStorage data. We use seriesRef so we
+  // don't need to add series to the dep array (avoiding a hooks-size warning).
   useEffect(() => {
+    if (!seriesRef.current) return;
     saveDrawings(symbol, timeframe, drawings.map(d => d.data));
   }, [drawings, symbol, timeframe]);
 
@@ -199,7 +206,11 @@ export default function DrawingLayer({ symbol, timeframe, chart, series, locked 
 
       const secondsPerPixel = (ts2 - ts1) / (sampleX2 - sampleX1);
       // Find rightmost sample point (t2 at sampleX2) and extrapolate to rightEdgePx
-      const extrapolated = Math.round(ts2 + secondsPerPixel * (rightEdgePx - sampleX2));
+      // Cap at 500 bars worth of time beyond the last sample to prevent infinite extension
+      const rawExtrapolated = ts2 + secondsPerPixel * (rightEdgePx - sampleX2);
+      const barInterval = Math.abs(ts2 - ts1) / Math.abs(sampleX2 - sampleX1) * 5; // ~5px per bar estimate
+      const maxExtension = barInterval * 500;
+      const extrapolated = Math.round(Math.min(rawExtrapolated, ts2 + maxExtension));
       return extrapolated;
     } catch {
       return null;
@@ -269,11 +280,7 @@ export default function DrawingLayer({ symbol, timeframe, chart, series, locked 
       const newData = JSON.parse(JSON.stringify(origData)) as DrawingObject;
       if (handle) {
         const price = series.coordinateToPrice(py) ?? null;
-        const rawT  = chart.timeScale().coordinateToTime(px);
-        const time: number | string | null = rawT === null || rawT === undefined ? null
-          : typeof rawT === "object"
-            ? (() => { const b = rawT as {year:number;month:number;day:number}; return `${b.year}-${String(b.month).padStart(2,"0")}-${String(b.day).padStart(2,"0")}`; })()
-            : rawT as number | string;
+        const time  = extrapolateTime(chart, px);
         if (price !== null && time !== null) applyHandleMove(newData, handle, time, price);
       } else {
         applyBodyMove(newData, px - startX, py - startY, chart, series);
@@ -446,6 +453,31 @@ function applyHandleMove(d: DrawingObject, handle: Handle, time: number | string
   }
 }
 
+// ── Shared time extrapolation helper ─────────────────────────────────────
+// coordinateToTime returns null when the pixel is past the last candle.
+// We extrapolate using the seconds-per-pixel rate from the two nearest samples.
+function extrapolateTime(chart: IChartApi, targetX: number): number | string | null {
+  const direct = chart.timeScale().coordinateToTime(targetX);
+  if (direct !== null && direct !== undefined) {
+    if (typeof direct === "object") {
+      const b = direct as { year: number; month: number; day: number };
+      return `${b.year}-${String(b.month).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`;
+    }
+    return direct as number | string;
+  }
+  // Sample two points inside the known range to get seconds-per-pixel rate
+  const sampleX1 = Math.max(0, targetX - 200);
+  const sampleX2 = Math.max(0, targetX - 100);
+  const t1 = chart.timeScale().coordinateToTime(sampleX1);
+  const t2 = chart.timeScale().coordinateToTime(sampleX2);
+  if (t1 === null || t1 === undefined || t2 === null || t2 === undefined) return null;
+  const ts1 = typeof t1 === "number" ? t1 : new Date(t1 as string).getTime() / 1000;
+  const ts2 = typeof t2 === "number" ? t2 : new Date(t2 as string).getTime() / 1000;
+  if (ts1 === ts2 || sampleX2 === sampleX1) return null;
+  const secondsPerPixel = (ts2 - ts1) / (sampleX2 - sampleX1);
+  return Math.round(ts2 + secondsPerPixel * (targetX - sampleX2));
+}
+
 function applyBodyMove(d: DrawingObject, dx: number, dy: number, chart: IChartApi, series: ISeriesApi<"Candlestick">): void {
   function sp(price: number): number {
     const y0 = series.priceToCoordinate(price);
@@ -455,10 +487,9 @@ function applyBodyMove(d: DrawingObject, dx: number, dy: number, chart: IChartAp
   function st(t: number | string): number | string {
     const x0 = chart.timeScale().timeToCoordinate(t as Time);
     if (x0 === null) return t;
-    const nt = chart.timeScale().coordinateToTime((x0 as number) + dx);
-    if (nt === null || nt === undefined) return t;
-    if (typeof nt === "object") { const b = nt as {year:number;month:number;day:number}; return `${b.year}-${String(b.month).padStart(2,"0")}-${String(b.day).padStart(2,"0")}`; }
-    return nt as number | string;
+    const result = extrapolateTime(chart, (x0 as number) + dx);
+    if (result === null) return t;
+    return result;
   }
   if (d.type === "trendline" || d.type === "fibonacci") {
     d.p1 = { time: st(d.p1.time), price: sp(d.p1.price) };

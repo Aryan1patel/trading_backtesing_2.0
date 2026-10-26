@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # ── Known NSE symbols (auto-detected when exchange param is omitted) ───────
 NSE_SYMBOLS: frozenset[str] = frozenset(
     {
-        # Nifty 50 core
+        # Nifty 50
         "RELIANCE", "TCS", "INFY", "WIPRO", "HDFCBANK", "ICICIBANK",
         "SBIN", "BHARTIARTL", "ITC", "KOTAKBANK", "TATAMOTORS",
         "BAJFINANCE", "ASIANPAINT", "MARUTI", "HINDUNILVR", "AXISBANK",
@@ -38,6 +38,18 @@ NSE_SYMBOLS: frozenset[str] = frozenset(
         "HINDALCO", "JSWSTEEL", "TATASTEEL", "BPCL", "EICHERMOT",
         "APOLLOHOSP", "GRASIM", "HCLTECH", "HEROMOTOCO", "BRITANNIA",
         "SBILIFE", "HDFCLIFE", "UPL", "VEDL", "INDUSINDBK", "M&M",
+        # Indices (handled separately via -INDEX suffix)
+        "NIFTY50", "BANKNIFTY", "NIFTYIT", "NIFTYMIDCAP50",
+        # Nifty Next 50 / popular mid-caps
+        "ZOMATO", "PAYTM", "NYKAA", "DMART", "PIIND", "PERSISTENT",
+        "LTIM", "MUTHOOTFIN", "ABCAPITAL", "BANDHANBNK", "CANBK",
+        "PNB", "BANKBARODA", "IDFCFIRSTB", "TRENT", "POLYCAB",
+        "HAVELLS", "SIEMENS", "ABB", "TORNTPHARM", "LUPIN",
+        "AUROPHARMA", "MANKIND", "MAXHEALTH", "IRCTC", "IRFC",
+        "HAL", "BEL", "NHPC", "RECLTD", "PFC", "ADANIGREEN",
+        "ADANIPOWER", "TATAPOWER", "CGPOWER", "SUZLON", "HFCL",
+        # MCX commodities — routed to Fyers MCX
+        "GOLD", "SILVER", "CRUDEOIL", "NATURALGAS", "COPPER",
     }
 )
 
