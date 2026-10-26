@@ -166,8 +166,8 @@ function timeToXFuture(api: SeriesAttachedParameter<Time>, t: number | string): 
   // We don't have the chart width here, but we can sample at large pixel values
   // and walk left until we find valid times.
   for (let offset = 50; offset <= 2000; offset += 50) {
-    const t1raw = ts2.coordinateToTime(offset as Time);
-    const t2raw = ts2.coordinateToTime((offset + 100) as Time);
+    const t1raw = ts2.coordinateToTime(offset);
+    const t2raw = ts2.coordinateToTime(offset + 100);
     if (t1raw === null || t1raw === undefined || t2raw === null || t2raw === undefined) continue;
     const ts1s = typeof t1raw === "number" ? t1raw : new Date(t1raw as string).getTime() / 1000;
     const ts2s = typeof t2raw === "number" ? t2raw : new Date(t2raw as string).getTime() / 1000;
