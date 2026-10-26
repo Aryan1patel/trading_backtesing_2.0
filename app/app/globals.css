@@ -3575,6 +3575,32 @@ input.bt-date {
   background: rgba(239, 83, 80, 0.1);
 }
 
+/* ── Clear-all button (icon + text label) ─────────────────────────────────── */
+.dt-btn--clear-all {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  width: auto;
+  height: auto;
+  min-height: 28px;
+  color: var(--text-muted);
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+
+.dt-btn--clear-all:hover:not(:disabled) {
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.12);
+}
+
+.dt-btn--clear-all:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* ── Separator between tools and actions ─────────────────────────────────── */
 .dt-separator {
   height: 1px;

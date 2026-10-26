@@ -391,12 +391,24 @@ export default function DrawingLayer({ symbol, timeframe, chart, series, locked 
             <path d="M2 3.5 H11 M4.5 3.5 V2 H8.5 V3.5 M4 3.5 L4.5 11 H8.5 L9 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <button className="dt-btn dt-btn--delete"
-          onClick={() => { drawings.forEach(d => { try { series?.detachPrimitive(d.primitive as never); } catch { /* ignore */ } }); setDrawings([]); setSelectedId(null); }}
-          disabled={drawings.length === 0} title="Clear all drawings" aria-label="Clear all drawings">
+        <button
+          className={`dt-btn dt-btn--clear-all${drawings.length === 0 ? " dt-btn--disabled" : ""}`}
+          disabled={drawings.length === 0}
+          title="Delete all drawings"
+          aria-label="Delete all drawings"
+          onClick={() => {
+            if (drawings.length === 0) return;
+            if (!window.confirm(`Delete all ${drawings.length} drawing${drawings.length === 1 ? "" : "s"}?`)) return;
+            drawings.forEach(d => { try { series?.detachPrimitive(d.primitive as never); } catch { /* ignore */ } });
+            setDrawings([]);
+            setSelectedId(null);
+          }}
+        >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 2 L11 11 M11 2 L2 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M1.5 3.5 H11.5 M3.5 3.5 V2.5 Q3.5 1.5 4.5 1.5 H8.5 Q9.5 1.5 9.5 2.5 V3.5 M4.5 3.5 L5 11 H8 L8.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 5.5 L2.5 11.5 Q2.5 12 3 12 H10 Q10.5 12 10.5 11.5 L11 5.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
+          <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "0.02em" }}>Clear All</span>
         </button>
       </div>
 
